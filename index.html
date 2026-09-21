@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Spese" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Registro Spese</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f5f7fb;--card:#fff;--muted:#6b7280;--line:#e5e7eb;--accent:#111827;--danger:#b91c1c;--success:#166534;--radius:16px}
+    *{box-sizing:border-box} body{margin:0;background:#f5f7fb;color:#111827} button,input,select,textarea{font:inherit}
+    .app{max-width:900px;margin:0 auto;min-height:100vh;padding:18px 16px calc(96px + env(safe-area-inset-bottom))}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.title{font-size:1.55rem;font-weight:800}.offline{font-size:.8rem;color:#92400e;background:#fef3c7;border-radius:999px;padding:6px 10px;display:none}
+    .offline.show{display:inline-block}.page{display:none}.page.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(17,24,39,.04)}
+    h2,h3{margin:0 0 12px}.grid{display:grid;gap:12px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.field label{display:block;font-size:.85rem;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;background:#fff;min-height:48px}.amount{font-size:2rem;font-weight:800;text-align:right}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:10px 14px;min-height:44px}.chip.selected{background:#111827;color:#fff;border-color:#111827}
+    .btn{border:0;border-radius:12px;padding:12px 16px;min-height:48px;font-weight:750;cursor:pointer}.btn.primary{background:#111827;color:#fff;width:100%}.btn.secondary{background:#eef2f7;color:#111827}.btn.danger{background:#fee2e2;color:#991b1b}.btn.small{min-height:38px;padding:8px 12px;font-size:.9rem}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row.between{justify-content:space-between}
+    .notice{padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#166534;margin:10px 0;display:none}.notice.show{display:block}.error{color:#b91c1c;font-size:.85rem;margin-top:5px}.muted{color:var(--muted);font-size:.9rem}
+    .movement{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.movement:last-child{border-bottom:0}.movement-main{min-width:0}.movement-meta{font-size:.85rem;color:var(--muted);white-space:normal}.movement-amount{font-weight:800;white-space:nowrap}.positive{color:var(--success)}.negative{color:var(--danger)}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.metric .label{font-size:.78rem;color:var(--muted)}.metric .value{font-size:1.2rem;font-weight:800;margin-top:4px}
+    .bar-row{display:grid;grid-template-columns:minmax(110px,1.4fr) 3fr auto;gap:8px;align-items:center;margin:9px 0}.bar-wrap{height:12px;background:#eef2f7;border-radius:999px;overflow:hidden}.bar{height:100%;background:#111827;border-radius:999px}
+    .nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));display:grid;grid-template-columns:repeat(4,1fr);z-index:20}.nav button{border:0;background:transparent;padding:10px 4px;font-size:.78rem;color:#6b7280}.nav button.active{color:#111827;font-weight:800}
+    .class-card{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}.option-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid #f1f5f9}.option-item:first-child{border-top:0}.hidden{display:none!important}
+    dialog{border:0;border-radius:18px;max-width:620px;width:calc(100% - 24px);padding:0;box-shadow:0 20px 60px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(0,0,0,.35)}.dialog-body{padding:18px}
+    @media(max-width:640px){.grid.two{grid-template-columns:1fr}.summary{grid-template-columns:1fr}.bar-row{grid-template-columns:110px 1fr auto}.app{padding-left:12px;padding-right:12px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><div class="title">Registro Spese</div><div id="offlineBadge" class="offline">Offline</div></header>
+
+  <section id="page-new" class="page active">
+    <div class="card">
+      <h2>Nuovo movimento</h2>
+      <form id="movementForm" class="grid">
+        <input type="hidden" id="editingId" />
+        <div class="grid two">
+          <div class="field"><label for="movementDate">Data</label><input id="movementDate" type="date" required /></div>
+          <div class="field"><label for="amount">Importo</label><input id="amount" class="amount" inputmode="decimal" autocomplete="off" placeholder="0,00" required /></div>
+        </div>
+        <div id="dynamicSelectors" class="grid"></div>
+        <div class="field"><label for="description">Descrizione <span class="muted">(facoltativa)</span></label><input id="description" maxlength="200" placeholder="es. Lidl, benzina, quota..." /></div>
+        <div id="formError" class="error"></div>
+        <button id="saveMovementBtn" class="btn primary" type="submit">Registra</button>
+        <button id="cancelEditBtn" class="btn secondary hidden" type="button">Annulla modifica</button>
+      </form>
+      <div id="saveNotice" class="notice">Movimento registrato.</div>
+    </div>
+  </section>
+
+  <section id="page-movements" class="page">
+    <div class="card">
+      <div class="row between"><h2>Movimenti</h2><button class="btn secondary small" id="resetFiltersBtn">Azzera filtri</button></div>
+      <div class="grid two">
+        <div class="field"><label>Dal</label><input id="filterFrom" type="date" /></div>
+        <div class="field"><label>Al</label><input id="filterTo" type="date" /></div>
+      </div>
+      <div id="filterSelectors" class="grid" style="margin-top:12px"></div>
+      <div class="field" style="margin-top:12px"><label>Cerca</label><input id="searchText" placeholder="Descrizione o livello" /></div>
+    </div>
+    <div class="card" id="movementsList"><div class="muted">Nessun movimento.</div></div>
+  </section>
+
+  <section id="page-analysis" class="page">
+    <div class="card">
+      <div class="row between"><h2>Analisi</h2><select id="analysisPeriod"><option value="month">Mese corrente</option><option value="year">Anno corrente</option><option value="all">Tutto</option></select></div>
+      <div id="summary" class="summary"></div>
+    </div>
+    <div id="analysisByClass"></div>
+  </section>
+
+  <section id="page-settings" class="page">
+    <div class="card">
+      <h2>Classi e livelli</h2>
+      <p class="muted">Le classi sono le dimensioni con cui descrivi ogni movimento. “Tipo” determina se il movimento aumenta o riduce il saldo.</p>
+      <div id="classesList"></div>
+      <button id="addClassBtn" class="btn secondary" type="button">+ Nuova classe</button>
+    </div>
+    <div class="card">
+      <h3>Esportazione e backup</h3>
+      <div class="grid">
+        <button id="exportCsvBtn" class="btn secondary">Esporta CSV</button>
+        <button id="exportJsonBtn" class="btn secondary">Esporta backup JSON</button>
+        <label class="btn secondary" style="text-align:center;cursor:pointer">Ripristina backup JSON<input id="importJsonInput" type="file" accept="application/json" class="hidden" /></label>
+      </div>
+      <p id="backupInfo" class="muted" style="margin-top:10px"></p>
+    </div>
+    <div class="card">
+      <h3>Privacy e dati locali</h3>
+      <p class="muted">I dati vengono salvati esclusivamente su questo dispositivo e non vengono inviati a server esterni. Eliminare i dati del browser può comportare la perdita dei dati. Crea regolarmente un backup completo.</p>
+      <button id="deleteAllBtn" class="btn danger">Elimina tutti i dati</button>
+    </div>
+    <div class="card">
+      <h3>Installazione su iPhone</h3>
+      <ol class="muted"><li>Apri l’indirizzo dell’app in Safari.</li><li>Premi Condividi.</li><li>Scegli “Aggiungi alla schermata Home”.</li><li>Apri Registro Spese dalla nuova icona.</li></ol>
+    </div>
+  </section>
+</div>
+
+<nav class="nav" id="bottomNav">
+  <button data-page="new" class="active">Nuovo</button>
+  <button data-page="movements">Movimenti</button>
+  <button data-page="analysis">Analisi</button>
+  <button data-page="settings">Impostazioni</button>
+</nav>
+
+<dialog id="classDialog"><div class="dialog-body"><h3 id="classDialogTitle">Classe</h3><div class="grid">
+  <div class="field"><label>Nome</label><input id="classNameInput" /></div>
+  <label class="row"><input id="classRequiredInput" type="checkbox" /> Obbligatoria</label>
+  <label class="row"><input id="classRememberInput" type="checkbox" /> Ricorda ultima selezione</label>
+  <div class="row"><button id="classSaveBtn" class="btn primary" type="button">Salva</button><button class="btn secondary" type="button" onclick="classDialog.close()">Chiudi</button></div>
+</div></div></dialog>
+
+<dialog id="optionDialog"><div class="dialog-body"><h3 id="optionDialogTitle">Livello</h3><div class="grid">
+  <div class="field"><label>Nome</label><input id="optionNameInput" /></div>
+  <div id="signField" class="field hidden"><label>Effetto sul saldo</label><select id="optionSignInput"><option value="-1">Riduce il saldo</option><option value="1">Aumenta il saldo</option></select></div>
+  <div class="field"><label>Colore (facoltativo)</label><input id="optionColorInput" type="color" value="#111827" /></div>
+  <div class="row"><button id="optionSaveBtn" class="btn primary" type="button">Salva</button><button class="btn secondary" type="button" onclick="optionDialog.close()">Chiudi</button></div>
+</div></div></dialog>
+
+<script>
+const DB_NAME='anna-registro-spese-html'; const DB_VERSION=1; let db; let classEditorId=null; let optionEditor={classId:null,optionId:null};
+const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+const uid=()=>crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2));
+const nowISO=()=>new Date().toISOString();
+function todayRome(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const o={};p.forEach(x=>o[x.type]=x.value);return `${o.year}-${o.month}-${o.day}`}
+function parseAmount(s){const v=String(s).trim().replace(',', '.');if(!/^\d+(?:\.\d{1,2})?$/.test(v)) throw new Error('Inserisci un importo valido con massimo due decimali.');const n=Math.round(Number(v)*100);if(!Number.isInteger(n)||n<=0) throw new Error('L’importo deve essere maggiore di zero.');return n}
+const eur=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(c/100);
+function req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function txDone(t){return new Promise((res,rej)=>{t.oncomplete=()=>res();t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
+async function openDB(){db=await new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('classes')){const s=d.createObjectStore('classes',{keyPath:'id'});s.createIndex('sortOrder','sortOrder')}if(!d.objectStoreNames.contains('options')){const s=d.createObjectStore('options',{keyPath:'id'});s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('movements')){const s=d.createObjectStore('movements',{keyPath:'id'});s.createIndex('movementDate','movementDate')}if(!d.objectStoreNames.contains('selections')){const s=d.createObjectStore('selections',{keyPath:'id'});s.createIndex('movementId','movementId');s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'key'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});await seed();}
+async function all(store){return req(db.transaction(store,'readonly').objectStore(store).getAll())}
+async function put(store,obj){const t=db.transaction(store,'readwrite');t.objectStore(store).put(obj);await txDone(t)}
+async function del(store,key){const t=db.transaction(store,'readwrite');t.objectStore(store).delete(key);await txDone(t)}
+async function setting(key){return req(db.transaction('settings').objectStore('settings').get(key))}
+async function setSetting(key,value){return put('settings',{key,value})}
+async function seed(){if((await all('classes')).length) return; const ts=nowISO(); const ids={type:uid(),wallet:uid(),cat:uid()}; const classes=[{id:ids.type,name:'Tipo',role:'cashflow',required:true,active:true,sortOrder:1,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts},{id:ids.wallet,name:'Portafoglio',role:'generic',required:true,active:true,sortOrder:2,defaultOptionId:null,rememberLastSelection:true,createdAt:ts,updatedAt:ts},{id:ids.cat,name:'Categoria',role:'generic',required:true,active:true,sortOrder:3,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts}];const outId=uid();classes[0].defaultOptionId=outId;const opts=[{id:uid(),classId:ids.type,name:'Entrata',cashflowSign:1,color:'#166534',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:outId,classId:ids.type,name:'Uscita',cashflowSign:-1,color:'#b91c1c',active:true,sortOrder:2,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Conto corrente',cashflowSign:null,color:'#111827',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Contanti extra',cashflowSign:null,color:'#92400e',active:true,sortOrder:2,createdAt:ts,updatedAt:ts}];['Alimentari','Casa','Auto e trasporti','Ristoranti e tempo libero','Shopping e regali','Salute','Viaggi','Lavoro','Formazione e tasse','Abbonamenti','Investimenti Banca Fede','Necessità','Obblighi','Imprevisti','Altro'].forEach((name,i)=>opts.push({id:uid(),classId:ids.cat,name,cashflowSign:null,color:null,active:true,sortOrder:i+1,createdAt:ts,updatedAt:ts}));const t=db.transaction(['classes','options'],'readwrite');classes.forEach(x=>t.objectStore('classes').put(x));opts.forEach(x=>t.objectStore('options').put(x));await txDone(t)}
+async function getModel(){const classes=(await all('classes')).sort((a,b)=>a.sortOrder-b.sortOrder);const options=await all('options');return {classes,options}}
+function optFor(options,classId){return options.filter(o=>o.classId===classId).sort((a,b)=>a.sortOrder-b.sortOrder)}
+async function renderForm(){const {classes,options}=await getModel();const box=$('#dynamicSelectors');box.innerHTML='';const last=(await setting('lastSelections'))?.value||{};for(const c of classes.filter(c=>c.active)){const os=optFor(options,c.id).filter(o=>o.active);const wrap=document.createElement('div');wrap.className='field';wrap.innerHTML=`<label>${esc(c.name)}${c.required?' *':''}</label><div class="chips" data-class="${c.id}"></div><div class="error" data-error="${c.id}"></div>`;box.appendChild(wrap);const chips=wrap.querySelector('.chips');let selected=c.defaultOptionId|| (c.rememberLastSelection?last[c.id]:null);if(selected&&!os.some(o=>o.id===selected))selected=null;os.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='chip'+(o.id===selected?' selected':'');b.dataset.option=o.id;b.textContent=o.name;b.onclick=()=>{chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};chips.appendChild(b)})}}
+async function saveMovement(e){e.preventDefault();$('#formError').textContent='';try{const {classes,options}=await getModel();const amountCents=parseAmount($('#amount').value);const movementDate=$('#movementDate').value;if(!movementDate)throw new Error('Seleziona la data.');const selections=[];for(const c of classes.filter(c=>c.active)){const chip=document.querySelector(`.chips[data-class="${c.id}"] .chip.selected`);if(c.required&&!chip)throw new Error(`Seleziona un livello per ${c.name}.`);if(chip){const o=options.find(x=>x.id===chip.dataset.option&&x.classId===c.id);if(!o)throw new Error('Selezione non valida.');selections.push({classId:c.id,optionId:o.id})}}const cash=classes.find(c=>c.role==='cashflow');const cashSel=selections.find(s=>s.classId===cash.id);const cashOpt=options.find(o=>o.id===cashSel?.optionId);if(!cashOpt||![1,-1].includes(cashOpt.cashflowSign))throw new Error('Tipo di movimento non valido.');const id=$('#editingId').value||uid();const old=(await all('movements')).find(m=>m.id===id);const m={id,movementDate,amountCents,description:$('#description').value.trim(),createdAt:old?.createdAt||nowISO(),updatedAt:nowISO()};const t=db.transaction(['movements','selections','settings'],'readwrite');t.objectStore('movements').put(m);const selStore=t.objectStore('selections');const existing=await req(selStore.index('movementId').getAll(id));existing.forEach(x=>selStore.delete(x.id));selections.forEach(s=>selStore.put({id:uid(),movementId:id,...s}));const remembered={...((await setting('lastSelections'))?.value||{})};classes.filter(c=>c.rememberLastSelection).forEach(c=>{const s=selections.find(x=>x.classId===c.id);if(s)remembered[c.id]=s.optionId});t.objectStore('settings').put({key:'lastSelections',value:remembered});await txDone(t);resetMovementForm();$('#saveNotice').classList.add('show');setTimeout(()=>$('#saveNotice').classList.remove('show'),1800);await refreshAll();}catch(err){$('#formError').textContent=err.message||String(err)}}
+function resetMovementForm(){ $('#editingId').value='';$('#movementDate').value=todayRome();$('#amount').value='';$('#description').value='';$('#saveMovementBtn').textContent='Registra';$('#cancelEditBtn').classList.add('hidden');renderForm()}
+async function dataJoined(){const {classes,options}=await getModel();const movements=await all('movements');const selections=await all('selections');const rows=movements.map(m=>{const sels=selections.filter(s=>s.movementId===m.id);const map={};sels.forEach(s=>map[s.classId]=s.optionId);const cash=classes.find(c=>c.role==='cashflow');const cashOpt=options.find(o=>o.id===map[cash?.id]);return {...m,map,sign:cashOpt?.cashflowSign||0,cashName:cashOpt?.name||''}});return {classes,options,rows}}
+async function renderFilters(){const {classes,options}=await getModel();const box=$('#filterSelectors');box.innerHTML='';for(const c of classes){const sel=document.createElement('select');sel.dataset.filterClass=c.id;sel.innerHTML=`<option value="">${esc(c.name)}: tutti</option>`+optFor(options,c.id).map(o=>`<option value="${o.id}">${esc(o.name)}${o.active?'':' (archiviato)'}</option>`).join('');sel.onchange=renderMovements;const f=document.createElement('div');f.className='field';f.appendChild(sel);box.appendChild(f)}}
+function getFilteredRows(model){let rows=[...model.rows];const from=$('#filterFrom').value,to=$('#filterTo').value,q=$('#searchText').value.trim().toLowerCase();if(from)rows=rows.filter(r=>r.movementDate>=from);if(to)rows=rows.filter(r=>r.movementDate<=to);$$('[data-filter-class]').forEach(s=>{if(s.value)rows=rows.filter(r=>r.map[s.dataset.filterClass]===s.value)});if(q)rows=rows.filter(r=>{const vals=Object.values(r.map).map(id=>model.options.find(o=>o.id===id)?.name||'');return (r.description+' '+vals.join(' ')).toLowerCase().includes(q)});return rows.sort((a,b)=>b.movementDate.localeCompare(a.movementDate)||b.createdAt.localeCompare(a.createdAt))}
+async function renderMovements(){const model=await dataJoined();const rows=getFilteredRows(model);const list=$('#movementsList');if(!rows.length){list.innerHTML='<div class="muted">Nessun movimento.</div>';return}list.innerHTML='';rows.forEach(r=>{const vals=model.classes.map(c=>{const o=model.options.find(o=>o.id===r.map[c.id]);return o?`${c.name}: ${o.name}`:null}).filter(Boolean).join(' · ');const el=document.createElement('div');el.className='movement';el.innerHTML=`<div class="movement-main"><div><strong>${fmtDate(r.movementDate)}</strong>${r.description?` · ${esc(r.description)}`:''}</div><div class="movement-meta">${esc(vals)}</div><div class="row" style="margin-top:8px"><button class="btn secondary small" data-edit="${r.id}">Modifica</button><button class="btn danger small" data-delete="${r.id}">Elimina</button></div></div><div class="movement-amount ${r.sign>0?'positive':'negative'}">${r.sign>0?'+':'−'}${eur(r.amountCents)}</div>`;list.appendChild(el)});list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editMovement(b.dataset.edit));list.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteMovement(b.dataset.delete))}
+async function editMovement(id){const {classes,rows}=await dataJoined();const r=rows.find(x=>x.id===id);if(!r)return;showPage('new');$('#editingId').value=id;$('#movementDate').value=r.movementDate;$('#amount').value=(r.amountCents/100).toFixed(2).replace('.',',');$('#description').value=r.description||'';await renderForm();classes.filter(c=>c.active).forEach(c=>{const id=r.map[c.id];const chip=document.querySelector(`.chips[data-class="${c.id}"] [data-option="${id}"]`);if(chip){chip.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('selected'));chip.classList.add('selected')}});$('#saveMovementBtn').textContent='Salva modifiche';$('#cancelEditBtn').classList.remove('hidden')}
+async function deleteMovement(id){if(!confirm('Eliminare questo movimento?'))return;const t=db.transaction(['movements','selections'],'readwrite');t.objectStore('movements').delete(id);const sels=await req(t.objectStore('selections').index('movementId').getAll(id));sels.forEach(s=>t.objectStore('selections').delete(s.id));await txDone(t);await refreshAll()}
+async function renderAnalysis(){const model=await dataJoined();let rows=[...model.rows];const p=$('#analysisPeriod').value;const t=todayRome();if(p==='month')rows=rows.filter(r=>r.movementDate.slice(0,7)===t.slice(0,7));if(p==='year')rows=rows.filter(r=>r.movementDate.slice(0,4)===t.slice(0,4));const inc=rows.filter(r=>r.sign===1).reduce((s,r)=>s+r.amountCents,0),out=rows.filter(r=>r.sign===-1).reduce((s,r)=>s+r.amountCents,0);$('#summary').innerHTML=`<div class="metric"><div class="label">Entrate</div><div class="value positive">${eur(inc)}</div></div><div class="metric"><div class="label">Uscite</div><div class="value negative">${eur(out)}</div></div><div class="metric"><div class="label">Saldo</div><div class="value ${inc-out>=0?'positive':'negative'}">${eur(inc-out)}</div></div>`;const box=$('#analysisByClass');box.innerHTML='';for(const c of model.classes){const groups={};for(const r of rows){const oid=r.map[c.id];if(!oid)continue;const o=model.options.find(x=>x.id===oid);if(!o)continue;if(!groups[oid])groups[oid]={name:o.name,total:0,count:0};groups[oid].total+=r.sign===-1?r.amountCents:0;groups[oid].count++}const arr=Object.values(groups).sort((a,b)=>b.total-a.total);if(!arr.length)continue;const max=Math.max(...arr.map(x=>x.total),1);const card=document.createElement('div');card.className='card';card.innerHTML=`<h3>${esc(c.name)} · uscite</h3>`+arr.map(g=>`<div class="bar-row"><div>${esc(g.name)}</div><div class="bar-wrap"><div class="bar" style="width:${Math.round(g.total/max*100)}%"></div></div><div><strong>${eur(g.total)}</strong><div class="muted">${g.count}</div></div></div>`).join('');box.appendChild(card)}}
+async function renderSettings(){const {classes,options}=await getModel();const box=$('#classesList');box.innerHTML='';for(const c of classes){const os=optFor(options,c.id);const card=document.createElement('div');card.className='class-card';card.innerHTML=`<div class="row between"><div><strong>${esc(c.name)}</strong> ${c.role==='cashflow'?'<span class="muted">(saldo)</span>':''}${!c.active?'<span class="muted"> · archiviata</span>':''}</div><div class="row"><button class="btn secondary small" data-edit-class="${c.id}">Modifica</button>${c.role!=='cashflow'?`<button class="btn secondary small" data-toggle-class="${c.id}">${c.active?'Archivia':'Ripristina'}</button>`:''}</div></div><div class="options">${os.map(o=>`<div class="option-item"><span>${esc(o.name)}${o.cashflowSign===1?' · aumenta saldo':o.cashflowSign===-1?' · riduce saldo':''}${!o.active?' · archiviato':''}</span><span class="row"><button class="btn secondary small" data-edit-option="${o.id}" data-class="${c.id}">Modifica</button><button class="btn secondary small" data-toggle-option="${o.id}" data-class="${c.id}">${o.active?'Archivia':'Ripristina'}</button></span></div>`).join('')}</div><button class="btn secondary small" data-add-option="${c.id}" style="margin-top:10px">+ Livello</button>`;box.appendChild(card)};box.querySelectorAll('[data-edit-class]').forEach(b=>b.onclick=()=>openClassDialog(b.dataset.editClass));box.querySelectorAll('[data-toggle-class]').forEach(b=>b.onclick=()=>toggleClass(b.dataset.toggleClass));box.querySelectorAll('[data-add-option]').forEach(b=>b.onclick=()=>openOptionDialog(b.dataset.addOption));box.querySelectorAll('[data-edit-option]').forEach(b=>b.onclick=()=>openOptionDialog(b.dataset.class,b.dataset.editOption));box.querySelectorAll('[data-toggle-option]').forEach(b=>b.onclick=()=>toggleOption(b.dataset.class,b.dataset.toggleOption));const bi=await setting('lastBackupAt');$('#backupInfo').textContent=bi?.value?`Ultimo backup: ${new Date(bi.value).toLocaleString('it-IT')}`:'Nessun backup completo ancora creato.'}
+async function openClassDialog(id=null){classEditorId=id;const classes=await all('classes');const c=classes.find(x=>x.id===id);$('#classDialogTitle').textContent=id?'Modifica classe':'Nuova classe';$('#classNameInput').value=c?.name||'';$('#classRequiredInput').checked=c?.required??true;$('#classRequiredInput').disabled=c?.role==='cashflow';$('#classRememberInput').checked=c?.rememberLastSelection||false;$('#classDialog').showModal()}
+async function saveClass(){const name=$('#classNameInput').value.trim();if(!name)return alert('Inserisci il nome.');const classes=await all('classes');if(classes.some(c=>c.id!==classEditorId&&c.active&&c.name.toLowerCase()===name.toLowerCase()))return alert('Esiste già una classe con questo nome.');const ts=nowISO();let c=classes.find(x=>x.id===classEditorId);if(c){c={...c,name,required:c.role==='cashflow'?true:$('#classRequiredInput').checked,rememberLastSelection:$('#classRememberInput').checked,updatedAt:ts}}else c={id:uid(),name,role:'generic',required:$('#classRequiredInput').checked,active:true,sortOrder:Math.max(0,...classes.map(x=>x.sortOrder))+1,defaultOptionId:null,rememberLastSelection:$('#classRememberInput').checked,createdAt:ts,updatedAt:ts};await put('classes',c);$('#classDialog').close();await refreshAll()}
+async function toggleClass(id){const cs=await all('classes');const c=cs.find(x=>x.id===id);if(!c||c.role==='cashflow')return;c.active=!c.active;c.updatedAt=nowISO();await put('classes',c);await refreshAll()}
+async function openOptionDialog(classId,optionId=null){optionEditor={classId,optionId};const {classes,options}=await getModel();const c=classes.find(x=>x.id===classId),o=options.find(x=>x.id===optionId);$('#optionDialogTitle').textContent=optionId?'Modifica livello':'Nuovo livello';$('#optionNameInput').value=o?.name||'';$('#optionColorInput').value=o?.color||'#111827';$('#signField').classList.toggle('hidden',c.role!=='cashflow');$('#optionSignInput').value=String(o?.cashflowSign??-1);$('#optionDialog').showModal()}
+async function saveOption(){const {classId,optionId}=optionEditor;const name=$('#optionNameInput').value.trim();if(!name)return alert('Inserisci il nome.');const {classes,options}=await getModel();const c=classes.find(x=>x.id===classId);if(!c)return;const os=optFor(options,classId);if(os.some(o=>o.id!==optionId&&o.active&&o.name.toLowerCase()===name.toLowerCase()))return alert('Esiste già un livello con questo nome.');const old=options.find(x=>x.id===optionId),ts=nowISO();const o=old?{...old,name,cashflowSign:c.role==='cashflow'?Number($('#optionSignInput').value):null,color:$('#optionColorInput').value,updatedAt:ts}:{id:uid(),classId,name,cashflowSign:c.role==='cashflow'?Number($('#optionSignInput').value):null,color:$('#optionColorInput').value,active:true,sortOrder:Math.max(0,...os.map(x=>x.sortOrder))+1,createdAt:ts,updatedAt:ts};await put('options',o);$('#optionDialog').close();await refreshAll()}
+async function toggleOption(classId,id){const {classes,options}=await getModel();const c=classes.find(x=>x.id===classId),o=options.find(x=>x.id===id);if(!o)return;if(c.role==='cashflow'&&o.active){const others=optFor(options,classId).filter(x=>x.active&&x.id!==id);if(!others.some(x=>x.cashflowSign===1)||!others.some(x=>x.cashflowSign===-1))return alert('Deve rimanere almeno un livello che aumenta e uno che riduce il saldo.')}o.active=!o.active;o.updatedAt=nowISO();await put('options',o);await refreshAll()}
+async function exportCSV(){const model=await dataJoined();const classCols=model.classes;const head=['id','data','importo','segno','importo_firmato','descrizione','creato_il','modificato_il',...classCols.map(c=>c.name)];const rows=model.rows.sort((a,b)=>a.movementDate.localeCompare(b.movementDate)).map(r=>{const sign=r.sign;return [r.id,r.movementDate,(r.amountCents/100).toFixed(2).replace('.',','),sign,String(sign*r.amountCents/100).replace('.',','),r.description,r.createdAt,r.updatedAt,...classCols.map(c=>model.options.find(o=>o.id===r.map[c.id])?.name||'')]});const csv='\ufeff'+[head,...rows].map(row=>row.map(csvCell).join(';')).join('\r\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),fileStamp('registro_spese','csv'))}
+function csvCell(v){const s=String(v??'');return /[;"\n\r]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
+async function exportJSON(){const data={schemaVersion:1,appVersion:'1.0.0-html',exportedAt:nowISO(),classes:await all('classes'),options:await all('options'),movements:await all('movements'),selections:await all('selections'),settings:await all('settings')};download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),fileStamp('registro_spese_backup','json'));await setSetting('lastBackupAt',nowISO());await renderSettings()}
+async function importJSON(file){try{const data=JSON.parse(await file.text());for(const k of ['classes','options','movements','selections','settings'])if(!Array.isArray(data[k]))throw new Error('Backup non valido.');if(Number(data.schemaVersion)!==1)throw new Error('Versione backup non compatibile.');if(!confirm(`Ripristinare il backup?\nMovimenti: ${data.movements.length}\nClassi: ${data.classes.length}\nI dati attuali verranno sostituiti.`))return;const t=db.transaction(['classes','options','movements','selections','settings'],'readwrite');for(const s of ['classes','options','movements','selections','settings']){const st=t.objectStore(s);st.clear();data[s].forEach(x=>st.put(x))}await txDone(t);await refreshAll();alert('Backup ripristinato.')}catch(e){alert(e.message||'Backup non valido.')}}
+async function deleteAll(){const word=prompt('Questa operazione cancella tutti i dati locali. Digita ELIMINA per continuare.');if(word!=='ELIMINA')return;db.close();await new Promise((res,rej)=>{const r=indexedDB.deleteDatabase(DB_NAME);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});await openDB();resetMovementForm();await refreshAll();alert('Dati eliminati e configurazione iniziale ripristinata.')}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+function fileStamp(prefix,ext){const d=new Date(),pad=n=>String(n).padStart(2,'0');return `${prefix}_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`}
+function fmtDate(s){const [y,m,d]=s.split('-');return `${d}/${m}/${y}`} function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function showPage(name){$$('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${name}`));$$('#bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.page===name));if(name==='movements')renderMovements();if(name==='analysis')renderAnalysis();if(name==='settings')renderSettings()}
+async function refreshAll(){await renderForm();await renderFilters();await renderMovements();await renderAnalysis();await renderSettings()}
+function netStatus(){ $('#offlineBadge').classList.toggle('show',!navigator.onLine)}
+async function init(){await openDB();$('#movementDate').value=todayRome();await refreshAll();$$('#bottomNav button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));$('#movementForm').onsubmit=saveMovement;$('#cancelEditBtn').onclick=resetMovementForm;$('#searchText').oninput=renderMovements;$('#filterFrom').onchange=renderMovements;$('#filterTo').onchange=renderMovements;$('#resetFiltersBtn').onclick=()=>{$('#filterFrom').value='';$('#filterTo').value='';$('#searchText').value='';$$('[data-filter-class]').forEach(x=>x.value='');renderMovements()};$('#analysisPeriod').onchange=renderAnalysis;$('#addClassBtn').onclick=()=>openClassDialog();$('#classSaveBtn').onclick=saveClass;$('#optionSaveBtn').onclick=saveOption;$('#exportCsvBtn').onclick=exportCSV;$('#exportJsonBtn').onclick=exportJSON;$('#importJsonInput').onchange=e=>e.target.files[0]&&importJSON(e.target.files[0]);$('#deleteAllBtn').onclick=deleteAll;window.addEventListener('online',netStatus);window.addEventListener('offline',netStatus);netStatus();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})}
+init().catch(e=>{document.body.innerHTML=`<div style="padding:24px;font-family:system-ui"><h2>Errore di avvio</h2><p>${esc(e.message||e)}</p></div>`})
+</script>
+</body>
+</html>
