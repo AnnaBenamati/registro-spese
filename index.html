@@ -16,7 +16,7 @@
     .app{max-width:900px;margin:0 auto;min-height:100vh;padding:18px 16px calc(96px + env(safe-area-inset-bottom))}
     header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.title{font-size:1.55rem;font-weight:800}.offline{font-size:.8rem;color:#92400e;background:#fef3c7;border-radius:999px;padding:6px 10px;display:none}
     .offline.show{display:inline-block}.page{display:none}.page.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(17,24,39,.04)}
-    h2,h3{margin:0 0 12px}.grid{display:grid;gap:12px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.field label{display:block;font-size:.85rem;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;background:#fff;min-height:48px}.amount{font-size:2rem;font-weight:800;text-align:right}
+    h2,h3{margin:0 0 12px}.grid{display:grid;gap:12px}.grid>*{min-width:0}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.field{min-width:0}.field label{display:block;font-size:.85rem;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{display:block;width:100%;max-width:100%;min-width:0;border:1px solid #d1d5db;border-radius:12px;padding:12px;background:#fff;min-height:48px}.field input[type="date"]{-webkit-appearance:none;appearance:none}.amount{font-size:2rem;font-weight:800;text-align:right}
     .chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:10px 14px;min-height:44px}.chip.selected{background:#111827;color:#fff;border-color:#111827}
     .btn{border:0;border-radius:12px;padding:12px 16px;min-height:48px;font-weight:750;cursor:pointer}.btn.primary{background:#111827;color:#fff;width:100%}.btn.secondary{background:#eef2f7;color:#111827}.btn.danger{background:#fee2e2;color:#991b1b}.btn.small{min-height:38px;padding:8px 12px;font-size:.9rem}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row.between{justify-content:space-between}
     .notice{padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#166534;margin:10px 0;display:none}.notice.show{display:block}.error{color:#b91c1c;font-size:.85rem;margin-top:5px}.muted{color:var(--muted);font-size:.9rem}
@@ -132,17 +132,91 @@ function parseAmount(s){const v=String(s).trim().replace(',', '.');if(!/^\d+(?:\
 const eur=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(c/100);
 function req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function txDone(t){return new Promise((res,rej)=>{t.oncomplete=()=>res();t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
-async function openDB(){db=await new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('classes')){const s=d.createObjectStore('classes',{keyPath:'id'});s.createIndex('sortOrder','sortOrder')}if(!d.objectStoreNames.contains('options')){const s=d.createObjectStore('options',{keyPath:'id'});s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('movements')){const s=d.createObjectStore('movements',{keyPath:'id'});s.createIndex('movementDate','movementDate')}if(!d.objectStoreNames.contains('selections')){const s=d.createObjectStore('selections',{keyPath:'id'});s.createIndex('movementId','movementId');s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'key'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});await seed();}
+async function openDB(){db=await new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('classes')){const s=d.createObjectStore('classes',{keyPath:'id'});s.createIndex('sortOrder','sortOrder')}if(!d.objectStoreNames.contains('options')){const s=d.createObjectStore('options',{keyPath:'id'});s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('movements')){const s=d.createObjectStore('movements',{keyPath:'id'});s.createIndex('movementDate','movementDate')}if(!d.objectStoreNames.contains('selections')){const s=d.createObjectStore('selections',{keyPath:'id'});s.createIndex('movementId','movementId');s.createIndex('classId','classId')}if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'key'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});await seed();await applyCategoryPresetV2();}
 async function all(store){return req(db.transaction(store,'readonly').objectStore(store).getAll())}
 async function put(store,obj){const t=db.transaction(store,'readwrite');t.objectStore(store).put(obj);await txDone(t)}
 async function del(store,key){const t=db.transaction(store,'readwrite');t.objectStore(store).delete(key);await txDone(t)}
 async function setting(key){return req(db.transaction('settings').objectStore('settings').get(key))}
 async function setSetting(key,value){return put('settings',{key,value})}
-async function seed(){if((await all('classes')).length) return; const ts=nowISO(); const ids={type:uid(),wallet:uid(),cat:uid()}; const classes=[{id:ids.type,name:'Tipo',role:'cashflow',required:true,active:true,sortOrder:1,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts},{id:ids.wallet,name:'Portafoglio',role:'generic',required:true,active:true,sortOrder:2,defaultOptionId:null,rememberLastSelection:true,createdAt:ts,updatedAt:ts},{id:ids.cat,name:'Categoria',role:'generic',required:true,active:true,sortOrder:3,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts}];const outId=uid();classes[0].defaultOptionId=outId;const opts=[{id:uid(),classId:ids.type,name:'Entrata',cashflowSign:1,color:'#166534',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:outId,classId:ids.type,name:'Uscita',cashflowSign:-1,color:'#b91c1c',active:true,sortOrder:2,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Conto corrente',cashflowSign:null,color:'#111827',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Contanti extra',cashflowSign:null,color:'#92400e',active:true,sortOrder:2,createdAt:ts,updatedAt:ts}];['Alimentari','Casa','Auto e trasporti','Ristoranti e tempo libero','Shopping e regali','Salute','Viaggi','Lavoro','Formazione e tasse','Abbonamenti','Investimenti Banca Fede','Necessità','Obblighi','Imprevisti','Altro'].forEach((name,i)=>opts.push({id:uid(),classId:ids.cat,name,cashflowSign:null,color:null,active:true,sortOrder:i+1,createdAt:ts,updatedAt:ts}));const t=db.transaction(['classes','options'],'readwrite');classes.forEach(x=>t.objectStore('classes').put(x));opts.forEach(x=>t.objectStore('options').put(x));await txDone(t)}
+async function seed(){if((await all('classes')).length) return; const ts=nowISO(); const ids={type:uid(),wallet:uid(),cat:uid()}; const classes=[{id:ids.type,name:'Tipo',role:'cashflow',required:true,active:true,sortOrder:1,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts},{id:ids.wallet,name:'Portafoglio',role:'generic',required:true,active:true,sortOrder:2,defaultOptionId:null,rememberLastSelection:true,createdAt:ts,updatedAt:ts},{id:ids.cat,name:'Categoria',role:'generic',required:true,active:true,sortOrder:3,defaultOptionId:null,rememberLastSelection:false,createdAt:ts,updatedAt:ts}];const outId=uid();classes[0].defaultOptionId=outId;const opts=[{id:uid(),classId:ids.type,name:'Entrata',cashflowSign:1,color:'#166534',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:outId,classId:ids.type,name:'Uscita',cashflowSign:-1,color:'#b91c1c',active:true,sortOrder:2,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Conto corrente',cashflowSign:null,color:'#111827',active:true,sortOrder:1,createdAt:ts,updatedAt:ts},{id:uid(),classId:ids.wallet,name:'Contanti extra',cashflowSign:null,color:'#92400e',active:true,sortOrder:2,createdAt:ts,updatedAt:ts}];['Affitto','Titoli/Fondi','Spesa','Stipendio','Dacia Mamma','Benzina','Ristoranti','Bollette','Abbonamenti','Amazon'].forEach((name,i)=>opts.push({id:uid(),classId:ids.cat,name,cashflowSign:null,color:null,active:true,sortOrder:i+1,createdAt:ts,updatedAt:ts}));const t=db.transaction(['classes','options'],'readwrite');classes.forEach(x=>t.objectStore('classes').put(x));opts.forEach(x=>t.objectStore('options').put(x));await txDone(t)}
+async function applyCategoryPresetV2(){
+  const preset=['Affitto','Titoli/Fondi','Spesa','Stipendio','Dacia Mamma','Benzina','Ristoranti','Bollette','Abbonamenti','Amazon'];
+  const marker=await setting('categoryPresetVersion');
+  if(Number(marker?.value||0)>=2)return;
+  const classes=await all('classes');
+  const category=classes.find(c=>c.name.trim().toLowerCase()==='categoria');
+  if(!category){await setSetting('categoryPresetVersion',2);return;}
+  const options=await all('options');
+  const selections=await all('selections');
+  const categoryOptions=options.filter(o=>o.classId===category.id);
+  const usedIds=new Set(selections.filter(x=>x.classId===category.id).map(x=>x.optionId));
+  const byName=new Map(categoryOptions.map(o=>[o.name.trim().toLowerCase(),o]));
+  const ts=nowISO();
+  const t=db.transaction(['options','settings'],'readwrite');
+  const store=t.objectStore('options');
+  preset.forEach((name,i)=>{
+    const existing=byName.get(name.toLowerCase());
+    if(existing){store.put({...existing,name,active:true,sortOrder:i+1,updatedAt:ts})}
+    else store.put({id:uid(),classId:category.id,name,cashflowSign:null,color:null,active:true,sortOrder:i+1,createdAt:ts,updatedAt:ts});
+  });
+  categoryOptions.forEach(o=>{
+    if(!preset.some(name=>name.toLowerCase()===o.name.trim().toLowerCase())){
+      if(usedIds.has(o.id))store.put({...o,active:false,updatedAt:ts});
+      else store.delete(o.id);
+    }
+  });
+  t.objectStore('settings').put({key:'categoryPresetVersion',value:2});
+  await txDone(t);
+}
 async function getModel(){const classes=(await all('classes')).sort((a,b)=>a.sortOrder-b.sortOrder);const options=await all('options');return {classes,options}}
 function optFor(options,classId){return options.filter(o=>o.classId===classId).sort((a,b)=>a.sortOrder-b.sortOrder)}
 async function renderForm(){const {classes,options}=await getModel();const box=$('#dynamicSelectors');box.innerHTML='';const last=(await setting('lastSelections'))?.value||{};for(const c of classes.filter(c=>c.active)){const os=optFor(options,c.id).filter(o=>o.active);const wrap=document.createElement('div');wrap.className='field';wrap.innerHTML=`<label>${esc(c.name)}${c.required?' *':''}</label><div class="chips" data-class="${c.id}"></div><div class="error" data-error="${c.id}"></div>`;box.appendChild(wrap);const chips=wrap.querySelector('.chips');let selected=c.defaultOptionId|| (c.rememberLastSelection?last[c.id]:null);if(selected&&!os.some(o=>o.id===selected))selected=null;os.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='chip'+(o.id===selected?' selected':'');b.dataset.option=o.id;b.textContent=o.name;b.onclick=()=>{chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};chips.appendChild(b)})}}
-async function saveMovement(e){e.preventDefault();$('#formError').textContent='';try{const {classes,options}=await getModel();const amountCents=parseAmount($('#amount').value);const movementDate=$('#movementDate').value;if(!movementDate)throw new Error('Seleziona la data.');const selections=[];for(const c of classes.filter(c=>c.active)){const chip=document.querySelector(`.chips[data-class="${c.id}"] .chip.selected`);if(c.required&&!chip)throw new Error(`Seleziona un livello per ${c.name}.`);if(chip){const o=options.find(x=>x.id===chip.dataset.option&&x.classId===c.id);if(!o)throw new Error('Selezione non valida.');selections.push({classId:c.id,optionId:o.id})}}const cash=classes.find(c=>c.role==='cashflow');const cashSel=selections.find(s=>s.classId===cash.id);const cashOpt=options.find(o=>o.id===cashSel?.optionId);if(!cashOpt||![1,-1].includes(cashOpt.cashflowSign))throw new Error('Tipo di movimento non valido.');const id=$('#editingId').value||uid();const old=(await all('movements')).find(m=>m.id===id);const m={id,movementDate,amountCents,description:$('#description').value.trim(),createdAt:old?.createdAt||nowISO(),updatedAt:nowISO()};const t=db.transaction(['movements','selections','settings'],'readwrite');t.objectStore('movements').put(m);const selStore=t.objectStore('selections');const existing=await req(selStore.index('movementId').getAll(id));existing.forEach(x=>selStore.delete(x.id));selections.forEach(s=>selStore.put({id:uid(),movementId:id,...s}));const remembered={...((await setting('lastSelections'))?.value||{})};classes.filter(c=>c.rememberLastSelection).forEach(c=>{const s=selections.find(x=>x.classId===c.id);if(s)remembered[c.id]=s.optionId});t.objectStore('settings').put({key:'lastSelections',value:remembered});await txDone(t);resetMovementForm();$('#saveNotice').classList.add('show');setTimeout(()=>$('#saveNotice').classList.remove('show'),1800);await refreshAll();}catch(err){$('#formError').textContent=err.message||String(err)}}
+async function saveMovement(e){
+  e.preventDefault();
+  $('#formError').textContent='';
+  try{
+    const {classes,options}=await getModel();
+    const amountCents=parseAmount($('#amount').value);
+    const movementDate=$('#movementDate').value;
+    if(!movementDate)throw new Error('Seleziona la data.');
+    const selections=[];
+    for(const c of classes.filter(c=>c.active)){
+      const chip=document.querySelector(`.chips[data-class="${c.id}"] .chip.selected`);
+      if(c.required&&!chip)throw new Error(`Seleziona un livello per ${c.name}.`);
+      if(chip){
+        const o=options.find(x=>x.id===chip.dataset.option&&x.classId===c.id);
+        if(!o)throw new Error('Selezione non valida.');
+        selections.push({classId:c.id,optionId:o.id});
+      }
+    }
+    const cash=classes.find(c=>c.role==='cashflow');
+    const cashSel=selections.find(s=>s.classId===cash.id);
+    const cashOpt=options.find(o=>o.id===cashSel?.optionId);
+    if(!cashOpt||![1,-1].includes(cashOpt.cashflowSign))throw new Error('Tipo di movimento non valido.');
+    const id=$('#editingId').value||uid();
+    const movements=await all('movements');
+    const old=movements.find(m=>m.id===id);
+    const currentSelections=(await all('selections')).filter(x=>x.movementId===id);
+    const remembered={...((await setting('lastSelections'))?.value||{})};
+    classes.filter(c=>c.rememberLastSelection).forEach(c=>{
+      const sel=selections.find(x=>x.classId===c.id);
+      if(sel)remembered[c.id]=sel.optionId;
+    });
+    const m={id,movementDate,amountCents,description:$('#description').value.trim(),createdAt:old?.createdAt||nowISO(),updatedAt:nowISO()};
+    const t=db.transaction(['movements','selections','settings'],'readwrite');
+    t.objectStore('movements').put(m);
+    const selStore=t.objectStore('selections');
+    currentSelections.forEach(x=>selStore.delete(x.id));
+    selections.forEach(sel=>selStore.put({id:uid(),movementId:id,...sel}));
+    t.objectStore('settings').put({key:'lastSelections',value:remembered});
+    await txDone(t);
+    resetMovementForm();
+    $('#saveNotice').classList.add('show');
+    setTimeout(()=>$('#saveNotice').classList.remove('show'),1800);
+    await refreshAll();
+  }catch(err){$('#formError').textContent=err.message||String(err)}
+}
+
 function resetMovementForm(){ $('#editingId').value='';$('#movementDate').value=todayRome();$('#amount').value='';$('#description').value='';$('#saveMovementBtn').textContent='Registra';$('#cancelEditBtn').classList.add('hidden');renderForm()}
 async function dataJoined(){const {classes,options}=await getModel();const movements=await all('movements');const selections=await all('selections');const rows=movements.map(m=>{const sels=selections.filter(s=>s.movementId===m.id);const map={};sels.forEach(s=>map[s.classId]=s.optionId);const cash=classes.find(c=>c.role==='cashflow');const cashOpt=options.find(o=>o.id===map[cash?.id]);return {...m,map,sign:cashOpt?.cashflowSign||0,cashName:cashOpt?.name||''}});return {classes,options,rows}}
 async function renderFilters(){const {classes,options}=await getModel();const box=$('#filterSelectors');box.innerHTML='';for(const c of classes){const sel=document.createElement('select');sel.dataset.filterClass=c.id;sel.innerHTML=`<option value="">${esc(c.name)}: tutti</option>`+optFor(options,c.id).map(o=>`<option value="${o.id}">${esc(o.name)}${o.active?'':' (archiviato)'}</option>`).join('');sel.onchange=renderMovements;const f=document.createElement('div');f.className='field';f.appendChild(sel);box.appendChild(f)}}
